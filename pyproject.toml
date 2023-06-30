@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "Bank Notificaton Tracker"
+version = "1.0.0"
+description = "Application to track payment notificaiton and track total"
+authors = ["Jason Lawrence <jason@clifter.net>"]
+readme = "README.md"
+repository = "https://github.com/clifter1/bank-realtrack"
+packages = []
+include = []
+
+[tool.poetry.dependencies]
+python = "^3.10"
+environs = "^9.5.0"
+uvicorn = "^0.15.0"
+fastapi = "^0.70.1"
+redbox = "^0.2.1"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+pre-commit = "^3.3.3"
+commitizen = "^3.5.2"
+ruff = "^0.0.275"
+interrogate = "^1.5.0"
+bandit = "^1.7.5"
+pytest = "^7.4.0"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B601", "B107", "B108"]
+
+[tool.black]
+line-length = 120
+
+[tool.interrogate]
+fail-under = 95
+verbose = 1
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "^3.5.2"
+tag_format = "v$version"
+
+[tool.ruff]
+line-length = 120
+exclude = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

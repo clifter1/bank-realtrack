@@ -1,7 +1,7 @@
 import logging
 import uvicorn
-import fileinput
-from fastapi import FastAPI
+import socket
+from fastapi import FastAPI, HTTPException
 
 import re
 import environs
@@ -27,54 +27,85 @@ logger.setLevel(env("LOGLEVEL").upper())
 
 
 # -------------------------------------------------------------------------------------------------
-#   Function to save updated value
-# -------------------------------------------------------------------------------------------------
-
-def update(sum: str):
-    '''
-    Function to update .env file with latest total
-    '''
-
-    with fileinput.FileInput(ENV_FILE, inplace = True) as f:
-    for line in f:
-        if line.startswith('ACCTOTAL'):
-            print(f'ACCTOTAL={sum}', end = '\n')
-        else:
-            print(line, end ='')
-
-
-# -------------------------------------------------------------------------------------------------
 #   Check email and update total
 # -------------------------------------------------------------------------------------------------
 
+
 @app.get("/total")
 def update():
+    # --------------------  Read to DATABASE file  --------------------
+    try:
+        total = float(open(env("DATABASE"), "r").read().rstrip())
+    except FileNotFoundError:
+        logger.warn(f"Database file {env('DATABASE')} was not found, default set to 0.00")
+        total = 0.00
+    except Exception as err:
+        errmsg = f"Unknown issue reading database: {err}"
+        logger.warn(errmsg)
+        raise HTTPException(status_code=500, detail=errmsg)
+    else:
+        logger.debug(f"Starting total: {total}")
 
-    total = env.float('ACCTOTAL')
-    logger.debug(f"Retrieved value {total} from config")
-
-    # --------------------  Login to IMAP outlook  --------------------
-    logger.debug("Connecting to IMAP email box to pull notifications")
-    box = EmailBox(host=env('IMAPPATH'), port=env('IMAPPORT'))
-    box.username = env('USERNAME')
-    box.password = env('PASSWORD')
-    box.update()
-    logger.debug("IMAP email box connected")
+    # --------------------  Login to IMAP account  --------------------
+    try:
+        logger.debug("Connecting to IMAP email box")
+        box = EmailBox(host=env("IMAPPATH"), port=env("IMAPPORT"))
+        box.username = env("USERNAME")
+        box.password = env("PASSWORD")
+        box.update()
+    except socket.gaierror as err:
+        logger.error(f"Issue connecting to '{IMAPPATH}' with: {err}")
+        raise HTTPException(status_code=504, detail="Issue conncting to IMAP server")
+    except exception as err:
+        raise HTTPException(status_code=504, detail="Unknown issue connecting to IMAP server")
+    else:
+        logger.info("IMAP email box connected")
 
     # --------------------  Parse mailbox notifications  --------------------
-    for msg in box.inbox.search(from_="Capital One", subject="A new transaction"):
-        amount = re.findall("\$[0-9]{1,3}\.[0-9]{2}", msg.text_body)[0].replace("$", "")
-        total += amount
-        logger.info(f"Notification amount found: {amount} Added to current total: {total}")
-        # msg.delete()
-        logger.debug("Notification message has been deleted")
+    logger.debug("Searching mailbox for specific notifications")
+    try:
+        for msg in box.inbox.search(from_="Capital One", subject="A new transaction"):
+            amount = re.findall("\$[0-9]{1,3}\.[0-9]{2}", msg.text_body)[0].replace("$", "")
+            total = round(total + float(amount), 2)
+            logger.info(f"Notification amount found: {amount}")
+            # msg.delete()
+            logger.debug("Notification message has been deleted")
+    except Exception as err:
+        logger.error("Issue searching mailbox: {err}")
+        raise HTTPException(status_code=504, detail="Unknown issue parsing inbox")
 
-    # --------------------  Update .env file  --------------------
-    logger.debug(f"Updated to a total of: {total)")
-    update(total)
+    # --------------------  Write to DATABASE file  --------------------
+    logger.debug(f"Current new total: {total}")
+    try:
+        open(env("DATABASE"), "w").write(str(total))
+    except Exception as err:
+        logger.error(f"Issue saving {total} to {env('DATABASE')}: {err}")
+    else:
+        logger.debug(f"New total saved to {env('DATABASE')}")
 
     # --------------------  Return value  --------------------
-    return total
+    return {"total": total}
+
+
+# -------------------------------------------------------------------------------------------------
+#
+# -------------------------------------------------------------------------------------------------
+
+
+@app.get("/reset")
+def reset():
+    empty = "0.00"
+
+    try:
+        logger.info(f"Setting total to {empty} for new month")
+        open(env("DATABASE"), "w").write(empty)
+    except Exception as err:
+        errmsg = f"Issue resetting the database: {err}"
+        logger.error(errmsg)
+        raise HTTPException(status_code=500, detail=errmsg)
+    else:
+        logger.debug("Database reset complete")
+        return {"total": empty}
 
 
 # -------------------------------------------------------------------------------------------------
@@ -82,4 +113,4 @@ def update():
 # -------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    uvicorn.run("run:app", host="0.0.0.0", port=8000)
+    uvicorn.run("run:app", host="0.0.0.0", port=80)
