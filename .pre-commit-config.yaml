@@ -9,7 +9,7 @@ repos:
 
       - id: commitizen
         name: Check Commitizen
-        entry: cz check --allow-abort --commit-msg-file $1
+        entry: cz check --allow-abort --commit-msg-file $MSG_FILE
         pass_filenames: false
         language: system
         stages: [commit-msg]
