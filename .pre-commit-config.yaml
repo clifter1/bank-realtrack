@@ -1,15 +1,4 @@
 repos:
-  - repo: https://github.com/floatingpurr/sync_with_poetry
-    rev: 1.1.0
-    hooks:
-      - id: sync_with_poetry
-        args: []
-
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: 3.5.2
-    hooks:
-      - id: commitizen
-
   - repo: local
     hooks:
       - id: black
@@ -18,11 +7,12 @@ repos:
         pass_filenames: false
         language: system
 
-      #- id: commitizen
-      #  name: Check Commitizen
-      #  entry: cz check --commit-msg-file ./git/COMMIT_EDITMSG
-      #  pass_filenames: false
-      #  language: system
+      - id: commitizen
+        name: Check Commitizen
+        entry: cz check --allow-abort --commit-msg-file
+        pass_filenames: false
+        language: system
+        stages: [commit-msg]
 
       - id: ruff
         name: Check Ruff
