@@ -1,3 +1,7 @@
+"""
+Core API script for service
+"""
+
 import logging
 import uvicorn
 import socket
@@ -33,6 +37,10 @@ logger.setLevel(env("LOGLEVEL").upper())
 
 @app.get("/total")
 def update():
+    """
+    API endpoint for tallying up the notifications sent to the email account
+    """
+
     # --------------------  Read to DATABASE file  --------------------
     try:
         total = float(open(env("DATABASE"), "r").read().rstrip())
@@ -54,10 +62,10 @@ def update():
         box.password = env("PASSWORD")
         box.update()
     except socket.gaierror as err:
-        logger.error(f"Issue connecting to '{IMAPPATH}' with: {err}")
+        logger.error(f"Issue connecting to {env('IMAPPATH')} with: {err}")
         raise HTTPException(status_code=504, detail="Issue conncting to IMAP server")
-    except exception as err:
-        raise HTTPException(status_code=504, detail="Unknown issue connecting to IMAP server")
+    except Exception as err:
+        raise HTTPException(status_code=504, detail=f"Unknown issue with IMAP server: {err}")
     else:
         logger.info("IMAP email box connected")
 
@@ -71,7 +79,7 @@ def update():
             # msg.delete()
             logger.debug("Notification message has been deleted")
     except Exception as err:
-        logger.error("Issue searching mailbox: {err}")
+        logger.error(f"Issue searching mailbox: {err}")
         raise HTTPException(status_code=504, detail="Unknown issue parsing inbox")
 
     # --------------------  Write to DATABASE file  --------------------
@@ -94,6 +102,10 @@ def update():
 
 @app.get("/reset")
 def reset():
+    """
+    API Endpoint for resetting the current count
+    """
+
     empty = "0.00"
 
     try:
@@ -113,4 +125,8 @@ def reset():
 # -------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    """
+    Main - Uvicorn setup and port configurations
+    """
+
     uvicorn.run("run:app", host="0.0.0.0", port=80)

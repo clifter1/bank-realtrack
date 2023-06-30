@@ -5,17 +5,45 @@ repos:
       - id: sync_with_poetry
         args: []
 
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: 3.5.2
+    hooks:
+      - id: commitizen
+
   - repo: local
     hooks:
       - id: black
         name: Check Black
-        entry: poetry run black 
+        entry: poetry run black .
         pass_filenames: false
         language: system
-        types: [python]
+
+      #- id: commitizen
+      #  name: Check Commitizen
+      #  entry: cz check --commit-msg-file ./git/COMMIT_EDITMSG
+      #  pass_filenames: false
+      #  language: system
+
       - id: ruff
         name: Check Ruff
-        entry: poetry run ruff
-        pass_filenames: true
+        entry: poetry run ruff .
+        pass_filenames: false
         language: system
-        types: [python]
+
+      - id: interrogate
+        name: Check Interrogate
+        entry: poetry run interrogate .
+        pass_filenames: false
+        language: system
+
+      - id: bandit
+        name: Check Bandit
+        entry: poetry run bandit -c pyproject.toml .
+        pass_filenames: false
+        language: system
+
+      - id: pytest
+        name: Check PyTest (Unit Tests)
+        entry: poetry run pytest tests/
+        pass_filenames: false
+        language: system
