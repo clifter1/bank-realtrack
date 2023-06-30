@@ -20,3 +20,6 @@ status:
 
 stop:
 	docker-compose down
+
+commit:
+	poetry run cz commit
