@@ -5,10 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - USERNAME=
-      - PASSWORD=
-      - IMAPPATH=
-      - LOGLEVEL=debug
+    env_file:
+      - .env
     ports:
       - 8000:80
