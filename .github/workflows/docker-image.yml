@@ -1,0 +1,32 @@
+name: Publish Docker Image
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy-to-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+    
+      - name: Docker Meta
+        id: meta
+        users: docker/metadata-action@v4
+        with:
+          images: clifter1/bank-realtrack
+    
+      - name: Docker Hub Login
+        uses: docker/login-action@v2
+        with:
+          username: ${{secrets.DOCKER_USER}}
+          password: ${{secrets.DOCKER_TOKEN}}
+          
+      - name: Docker Hub Build and Push
+        users: docker/build-push-action@v4
+        with:
+          context: .
+            tags: ${{ steps.meta.outputs.tags }}
+            labels: ${{ steps.meta.outputs.labels }}
