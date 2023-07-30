@@ -34,7 +34,8 @@ logger.setLevel(env("LOGLEVEL").upper())
 app.db = os.path.join(env("DATADIRS"), env("DATABASE"))
 os.makedirs(env("DATADIRS"), exist_ok=True)
 if not os.path.isfile(app.db):
-    open(app.db, "w").write("0.00")
+    with open(app.db, "w") as fp:
+        fp.write("0.00")
 
 
 # -------------------------------------------------------------------------------------------------
@@ -50,7 +51,8 @@ def update():
 
     # --------------------  Read to DATABASE file  --------------------
     try:
-        total = float(open(app.db, "r").read().rstrip())
+        with open(app.db, "r") as fp:
+            total = float(fp.read().rstrip())
     except Exception as err:
         errmsg = f"Unknown issue reading database: {err}"
         logger.error(errmsg)
@@ -80,7 +82,7 @@ def update():
             amount = re.findall("\$[0-9]{1,3}\.[0-9]{2}", msg.text_body)[0].replace("$", "")
             total = round(total + float(amount), 2)
             logger.info(f"Notification amount found: {amount}")
-            # msg.delete()
+            msg.delete()
             logger.debug("Notification message has been deleted")
     except Exception as err:
         logger.error(f"Issue searching mailbox: {err}")
@@ -89,7 +91,8 @@ def update():
     # --------------------  Write to DATABASE file  --------------------
     logger.debug(f"Current new total: {total}")
     try:
-        open(app.db, "w").write(str(total))
+        with open(app.db, "w") as fp:
+            fp.write(str(total))
     except Exception as err:
         logger.error(f"Issue saving {total} to {env('DATABASE')}: {err}")
     else:
@@ -112,7 +115,8 @@ def reset():
 
     try:
         logger.info("Saved total was reset for the new month")
-        open(app.db, "w").write("0.00")
+        with open(app.db, "w") as fp:
+            fp.write("0.00")
     except Exception as err:
         errmsg = f"Issue resetting the database: {err}"
         logger.error(errmsg)
@@ -135,7 +139,8 @@ def health():
 
     # --------------------  Read to DATABASE file  --------------------
     try:
-        total = float((app.db, "r").read().rstrip())
+        with open(app.db, "r") as fp:
+            total = float(fp.read().rstrip())
     except FileNotFoundError:
         logger.warn(f"Database file {env('DATABASE')} was not found in health check")
     except Exception as err:
