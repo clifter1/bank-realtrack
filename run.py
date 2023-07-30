@@ -103,6 +103,7 @@ def update():
 #   Reset DB Function
 # -------------------------------------------------------------------------------------------------
 
+
 @app.get("/reset")
 def reset():
     """
@@ -125,6 +126,7 @@ def reset():
 #   Health Check
 # -------------------------------------------------------------------------------------------------
 
+
 @app.get("/health")
 def health():
     """
@@ -133,7 +135,7 @@ def health():
 
     # --------------------  Read to DATABASE file  --------------------
     try:
-        total = float(app.db, "r").read().rstrip())
+        total = float((app.db, "r").read().rstrip())
     except FileNotFoundError:
         logger.warn(f"Database file {env('DATABASE')} was not found in health check")
     except Exception as err:
