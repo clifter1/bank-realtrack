@@ -9,7 +9,7 @@ ENV USERNAME= \
     WEBSPORT=80 \
     LOGLEVEL=info \
     IMAPPORT=993 \
-    DATADIRS=/data
+    DATADIRS=/data \
     DATABASE=data.db \
     TIMEZONE=America/New_York
 
