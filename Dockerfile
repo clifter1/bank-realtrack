@@ -9,6 +9,7 @@ ENV USERNAME= \
     WEBSPORT=80 \
     LOGLEVEL=info \
     IMAPPORT=993 \
+    DATADIRS=/data
     DATABASE=data.db \
     TIMEZONE=America/New_York
 
@@ -34,7 +35,8 @@ RUN apt-get update -y \
     && echo "1 0 1 * * curl http://localhost:${WEBSPORT}/total" >> /etc/cron.d/sync-cron \
     && echo "5 0 1 * * curl http://localhost:${WEBSPORT}/reset" >> /etc/cron.d/sync-cron \
     && chmod 0644 /etc/cron.d/sync-cron \
-    && crontab /etc/cron.d/sync-cron
+    && crontab /etc/cron.d/sync-cron \
+    && mkdir ${DATADIRS}
 
 WORKDIR /app
 

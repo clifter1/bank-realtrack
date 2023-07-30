@@ -2,6 +2,7 @@
 Core API script for service
 """
 
+import os
 import logging
 import uvicorn
 import socket
@@ -26,8 +27,14 @@ ENV_FILE = ".env"
 env = environs.Env()
 env.read_env(ENV_FILE, recurse=True)
 app = FastAPI(debug=True)
+
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(env("LOGLEVEL").upper())
+
+app.db = os.path.join(env("DATADIRS"), env("DATABASE"))
+os.makedirs(env("DATADIRS"), exist_ok=True)
+if not os.path.isfile(app.db):
+    open(app.db, "w").write("0.00")
 
 
 # -------------------------------------------------------------------------------------------------
@@ -43,13 +50,10 @@ def update():
 
     # --------------------  Read to DATABASE file  --------------------
     try:
-        total = float(open(env("DATABASE"), "r").read().rstrip())
-    except FileNotFoundError:
-        logger.warn(f"Database file {env('DATABASE')} was not found, default set to 0.00")
-        total = 0.00
+        total = float(open(app.db, "r").read().rstrip())
     except Exception as err:
         errmsg = f"Unknown issue reading database: {err}"
-        logger.warn(errmsg)
+        logger.error(errmsg)
         raise HTTPException(status_code=500, detail=errmsg)
     else:
         logger.debug(f"Starting total: {total}")
@@ -85,7 +89,7 @@ def update():
     # --------------------  Write to DATABASE file  --------------------
     logger.debug(f"Current new total: {total}")
     try:
-        open(env("DATABASE"), "w").write(str(total))
+        open(app.db, "w").write(str(total))
     except Exception as err:
         logger.error(f"Issue saving {total} to {env('DATABASE')}: {err}")
     else:
@@ -105,18 +109,16 @@ def reset():
     API Endpoint for resetting the current count
     """
 
-    empty = 0.00
-
     try:
-        logger.info(f"Setting total to {empty} for new month")
-        open(env("DATABASE"), "w").write(str(empty))
+        logger.info("Saved total was reset for the new month")
+        open(app.db, "w").write("0.00")
     except Exception as err:
         errmsg = f"Issue resetting the database: {err}"
         logger.error(errmsg)
         raise HTTPException(status_code=500, detail=errmsg)
     else:
         logger.debug("Database reset complete")
-        return {"total": empty}
+        return {"total": 0.00}
 
 
 # -------------------------------------------------------------------------------------------------
@@ -131,7 +133,7 @@ def health():
 
     # --------------------  Read to DATABASE file  --------------------
     try:
-        total = float(open(env("DATABASE"), "r").read().rstrip())
+        total = float(app.db, "r").read().rstrip())
     except FileNotFoundError:
         logger.warn(f"Database file {env('DATABASE')} was not found in health check")
     except Exception as err:
