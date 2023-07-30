@@ -6,9 +6,11 @@ LABEL description="Python FastAPI: Bank Ledger WebApp"
 ENV USERNAME= \
     PASSWORD= \
     IMAPPATH= \
+    WEBSPORT=80 \
     LOGLEVEL=info \
     IMAPPORT=993 \
-    DATABASE=data.db
+    DATABASE=data.db \
+    TIMEZONE=America/New_York
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -22,9 +24,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update -y \
     && apt-get upgrade -y \
+    && apt-get -y install curl cron \
     && apt-get clean \
     && pip install --upgrade pip \
-    && pip install "poetry==$POETRY_VERSION"
+    && pip install "poetry==${POETRY_VERSION}" \
+    && ln -fs /usr/share/zoneinfo/${TIMEZONE} /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && touch /etc/cron.d/sync-cron \
+    && echo "1 0 1 * * curl http://localhost:${WEBSPORT}/total" >> /etc/cron.d/sync-cron \
+    && echo "5 0 1 * * curl http://localhost:${WEBSPORT}/reset" >> /etc/cron.d/sync-cron \
+    && chmod 0644 /etc/cron.d/sync-cron \
+    && crontab /etc/cron.d/sync-cron
 
 WORKDIR /app
 
@@ -33,5 +43,6 @@ RUN poetry config virtualenvs.create false \
     && poetry install --no-ansi --no-interaction
 COPY run.py ./
 
-EXPOSE 80
-CMD ["poetry", "run", "python", "run.py"]
+EXPOSE ${WEBSPORT}
+HEALTHCHECK --timeout=5s --start-period=10s CMD curl --fail http://localhost:${WEBSPORT}/health || exit 1
+CMD ["sh", "-c", "cron && poetry run python run.py"]

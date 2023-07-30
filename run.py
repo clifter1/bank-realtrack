@@ -96,9 +96,8 @@ def update():
 
 
 # -------------------------------------------------------------------------------------------------
-#
+#   Reset DB Function
 # -------------------------------------------------------------------------------------------------
-
 
 @app.get("/reset")
 def reset():
@@ -106,11 +105,11 @@ def reset():
     API Endpoint for resetting the current count
     """
 
-    empty = "0.00"
+    empty = 0.00
 
     try:
         logger.info(f"Setting total to {empty} for new month")
-        open(env("DATABASE"), "w").write(empty)
+        open(env("DATABASE"), "w").write(str(empty))
     except Exception as err:
         errmsg = f"Issue resetting the database: {err}"
         logger.error(errmsg)
@@ -118,6 +117,30 @@ def reset():
     else:
         logger.debug("Database reset complete")
         return {"total": empty}
+
+
+# -------------------------------------------------------------------------------------------------
+#   Health Check
+# -------------------------------------------------------------------------------------------------
+
+@app.get("/health")
+def health():
+    """
+    API Endpoint for Docker health checks
+    """
+
+    # --------------------  Read to DATABASE file  --------------------
+    try:
+        total = float(open(env("DATABASE"), "r").read().rstrip())
+    except FileNotFoundError:
+        logger.warn(f"Database file {env('DATABASE')} was not found in health check")
+    except Exception as err:
+        errmsg = f"Unknown issue reading database durring health check: {err}"
+        logger.error(errmsg)
+        raise HTTPException(status_code=500, detail=errmsg)
+
+    logger.debug(f"Found database with {total} value durring health check")
+    return {"status": "successful"}
 
 
 # -------------------------------------------------------------------------------------------------
