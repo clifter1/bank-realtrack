@@ -32,8 +32,8 @@ RUN apt-get update -y \
     && ln -fs /usr/share/zoneinfo/${TIMEZONE} /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata \
     && touch /etc/cron.d/sync-cron \
-    && echo "1 0 1 * * curl http://localhost:${WEBSPORT}/total" >> /etc/cron.d/sync-cron \
-    && echo "5 0 1 * * curl http://localhost:${WEBSPORT}/reset" >> /etc/cron.d/sync-cron \
+    && echo "58 5,11,17,23 * * * curl http://localhost:${WEBSPORT}/total" >> /etc/cron.d/sync-cron \
+    && echo "2 0 1 * * curl http://localhost:${WEBSPORT}/reset" >> /etc/cron.d/sync-cron \
     && chmod 0644 /etc/cron.d/sync-cron \
     && crontab /etc/cron.d/sync-cron \
     && mkdir ${DATADIRS}
