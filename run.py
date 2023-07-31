@@ -2,15 +2,23 @@
 Core API script for service
 """
 
-import os
-import logging
-import uvicorn
-import socket
-from fastapi import FastAPI, HTTPException
+# -------------------------------------------------------------------------------------------------
+#   Core Modules
+# -------------------------------------------------------------------------------------------------
 
+import logging
+import os
 import re
+
+
+# -------------------------------------------------------------------------------------------------
+#   3rd Party Modules
+# -------------------------------------------------------------------------------------------------
+
 import environs
-from redbox import EmailBox
+from fastapi import FastAPI, HTTPException
+from imap_tools import MailBox, AND
+import uvicorn
 
 
 # -------------------------------------------------------------------------------------------------
@@ -24,13 +32,16 @@ ENV_FILE = ".env"
 #   Initialization
 # -------------------------------------------------------------------------------------------------
 
+# ----------  Parse .env configs and start FastAPI  ----------
 env = environs.Env()
 env.read_env(ENV_FILE, recurse=True)
 app = FastAPI(debug=True)
 
+# ----------  Start logging service  ----------
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(env("LOGLEVEL").upper())
 
+# ----------  Seed Database (if not found)  ----------
 app.db = os.path.join(env("DATADIRS"), env("DATABASE"))
 os.makedirs(env("DATADIRS"), exist_ok=True)
 if not os.path.isfile(app.db):
@@ -39,7 +50,7 @@ if not os.path.isfile(app.db):
 
 
 # -------------------------------------------------------------------------------------------------
-#   Check email and update total
+#   Check email and update totals
 # -------------------------------------------------------------------------------------------------
 
 
@@ -49,7 +60,7 @@ def update():
     API endpoint for tallying up the notifications sent to the email account
     """
 
-    # --------------------  Read to DATABASE file  --------------------
+    # --------------------  Read DATABASE file  --------------------
     try:
         with open(app.db, "r") as fp:
             total = float(fp.read().rstrip())
@@ -60,30 +71,21 @@ def update():
     else:
         logger.debug(f"Starting total: {total}")
 
-    # --------------------  Login to IMAP account  --------------------
-    try:
-        logger.debug("Connecting to IMAP email box")
-        box = EmailBox(host=env("IMAPPATH"), port=env("IMAPPORT"))
-        box.username = env("USERNAME")
-        box.password = env("PASSWORD")
-        box.update()
-    except socket.gaierror as err:
-        logger.error(f"Issue connecting to {env('IMAPPATH')} with: {err}")
-        raise HTTPException(status_code=504, detail="Issue conncting to IMAP server")
-    except Exception as err:
-        raise HTTPException(status_code=504, detail=f"Unknown issue with IMAP server: {err}")
-    else:
-        logger.info("IMAP email box connected")
-
     # --------------------  Parse mailbox notifications  --------------------
-    logger.debug("Searching mailbox for specific notifications")
+    logger.debug("Searching mailbox for specified notifications")
     try:
-        for msg in box.inbox.search(from_="Capital One", subject="A new transaction"):
-            amount = re.findall("\$[0-9]{1,3}\.[0-9]{2}", msg.text_body)[0].replace("$", "")
-            total = round(total + float(amount), 2)
-            logger.info(f"Notification amount found: {amount}")
-            msg.delete()
-            logger.debug("Notification message has been deleted")
+        all_messages = []
+        with MailBox(env("IMAPPATH")).login(env("USERNAME"), env("PASSWORD")) as mailbox:
+            # ----------  Parse email and add to total  ----------
+            for msg in mailbox.fetch(AND(from_="Capital One", subject="A new transaction")):
+                amount = re.findall("\$[0-9]{1,3}\.[0-9]{2}", msg.text)[0].replace("$", "")
+                total = round(total + float(amount), 2)
+                all_messages.append(msg.uid)
+                logger.debug(f"Notification total {amount} added")
+
+            # ----------  Delete all found email  ----------
+            mailbox.delete(all_messages)
+            logger.info(f"Total email found, parsed, and pruged: {len(all_messages)}")
     except Exception as err:
         logger.error(f"Issue searching mailbox: {err}")
         raise HTTPException(status_code=504, detail="Unknown issue parsing inbox")
