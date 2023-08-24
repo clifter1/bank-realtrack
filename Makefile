@@ -9,7 +9,9 @@ setup:
 	poetry install --with dev
 	poetry run pre-commit install --hook-type commit-msg
 
+
 build:
+	poetry update
 	docker-compose build
 
 start:
@@ -20,6 +22,3 @@ status:
 
 stop:
 	docker-compose down
-
-commit:
-	poetry run cz commit

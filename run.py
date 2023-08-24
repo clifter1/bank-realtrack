@@ -16,7 +16,8 @@ import re
 # -------------------------------------------------------------------------------------------------
 
 import environs
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.templating import Jinja2Templates
 from imap_tools import MailBox, AND
 import uvicorn
 
@@ -35,7 +36,8 @@ ENV_FILE = ".env"
 # ----------  Parse .env configs and start FastAPI  ----------
 env = environs.Env()
 env.read_env(ENV_FILE, recurse=True)
-app = FastAPI(debug=True)
+app = FastAPI(title="Bank Tracking Application")
+templates = Jinja2Templates(directory="templates")
 
 # ----------  Start logging service  ----------
 logger = logging.getLogger("uvicorn.error")
@@ -50,11 +52,32 @@ if not os.path.isfile(app.db):
 
 
 # -------------------------------------------------------------------------------------------------
+#   Serve basic web component
+# -------------------------------------------------------------------------------------------------
+
+
+@app.get("/")
+async def index(request: Request):
+    """
+    Core webpage
+    """
+
+    # --------------------  Read DATABASE file  --------------------
+    try:
+        with open(app.db, "r") as fp:
+            total = float(fp.read().rstrip())
+    except Exception:
+        total = 0.00
+    finally:
+        return templates.TemplateResponse("index.html", {"request": request, "total": total})
+
+
+# -------------------------------------------------------------------------------------------------
 #   Check email and update totals
 # -------------------------------------------------------------------------------------------------
 
 
-@app.get("/total")
+@app.get("/update")
 def update():
     """
     API endpoint for tallying up the notifications sent to the email account
@@ -110,10 +133,14 @@ def update():
 
 
 @app.get("/reset")
-def reset():
+def reset(request: Request):
     """
     API Endpoint for resetting the current count
     """
+
+    # --------------------  IP Restricted  --------------------
+    if request.client.host != "127.0.0.1":
+        raise HTTPException(status_code=405, detail="Access Denied")
 
     try:
         logger.info("Saved total was reset for the new month")
@@ -134,12 +161,16 @@ def reset():
 
 
 @app.get("/health")
-def health():
+def health(request: Request):
     """
     API Endpoint for Docker health checks
     """
 
-    # --------------------  Read to DATABASE file  --------------------
+    # --------------------  IP Restricted  --------------------
+    if request.client.host != "127.0.0.1":
+        raise HTTPException(status_code=405, detail="Access Denied")
+
+    # --------------------  Read DATABASE file  --------------------
     try:
         with open(app.db, "r") as fp:
             total = float(fp.read().rstrip())
@@ -163,4 +194,4 @@ if __name__ == "__main__":
     Main - Uvicorn setup and port configurations
     """
 
-    uvicorn.run("run:app", host="0.0.0.0", port=80)
+    uvicorn.run("run:app", host="0.0.0.0", port=env.int("WEBSPORT"), log_level=env("LOGLEVEL"))

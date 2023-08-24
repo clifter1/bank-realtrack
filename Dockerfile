@@ -32,8 +32,8 @@ RUN apt-get update -y \
     && ln -fs /usr/share/zoneinfo/${TIMEZONE} /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata \
     && touch /etc/cron.d/sync-cron \
-    && echo "58 5,11,17,23 * * * curl http://localhost:${WEBSPORT}/total" >> /etc/cron.d/sync-cron \
-    && echo "2 0 1 * * curl http://localhost:${WEBSPORT}/reset" >> /etc/cron.d/sync-cron \
+    && echo "58 5,11,17,23 * * * curl http://localhost:${WEBSPORT}/api/total" >> /etc/cron.d/sync-cron \
+    && echo "2 0 1 * * curl http://localhost:${WEBSPORT}/api/reset" >> /etc/cron.d/sync-cron \
     && chmod 0644 /etc/cron.d/sync-cron \
     && crontab /etc/cron.d/sync-cron \
     && mkdir ${DATADIRS}
@@ -43,8 +43,12 @@ WORKDIR /app
 COPY poetry.lock pyproject.toml ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-ansi --no-interaction
+
 COPY run.py ./
+COPY templates/ ./templates/
 
 EXPOSE ${WEBSPORT}
-HEALTHCHECK --timeout=5s --start-period=10s CMD curl --fail http://localhost:${WEBSPORT}/health || exit 1
+HEALTHCHECK --interval=600s --timeout=10s \
+        CMD curl --fail http://localhost:${WEBSPORT}/health || exit 1
+
 CMD ["sh", "-c", "cron && poetry run python run.py"]

@@ -36,9 +36,9 @@ repos:
         language: system
         stages: [commit-msg]
 
-      - id: commitizen
-        name: Check Commitizen
-        entry: cz check --allow-abort --commit-msg-file .git/COMMIT_EDITMSG
-        pass_filenames: false
-        language: system
-        stages: [commit-msg]
+      #- id: commitizen
+      #  name: Check Commitizen
+      #  entry: cz check --allow-abort --commit-msg-file .git/COMMIT_EDITMSG
+      #  pass_filenames: false
+      #  language: system
+      #  stages: [commit-msg]
