@@ -17,7 +17,7 @@ import re
 
 import environs
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from imap_tools import MailBox, AND
 import uvicorn
 
@@ -37,9 +37,37 @@ ENV_FILE = ".env"
 env = environs.Env()
 env.read_env(ENV_FILE, recurse=True)
 app = FastAPI(title="Bank Tracking Application")
-templates = Jinja2Templates(directory="templates")
+api = FastAPI(title="Bank Backend API")
+app.mount("/api", api)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+# ----------  Log filtering class  ----------
+class EndpointFilter(logging.Filter):
+    """
+    Filter class to parse out logs that are not needed
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """
+        Core filter function
+        """
+
+        if record.args:
+            if len(record.args) >= 4:
+                verb = record.args[1]
+                path = record.args[2]
+                domain = record.args[0]
+                status = record.args[4]
+
+                # ----------  Ignore valid docker healthcheck call  -----------
+                if "127.0.0.1" in domain:
+                    if path == "/api/health" and verb == "GET" and status == 200:
+                        return False
+        return True
+
 
 # ----------  Start logging service  ----------
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(env("LOGLEVEL").upper())
 
@@ -56,20 +84,22 @@ if not os.path.isfile(app.db):
 # -------------------------------------------------------------------------------------------------
 
 
-@app.get("/")
+@api.get("/retrieve")
 async def index(request: Request):
     """
-    Core webpage
+    API endpoint to return current total
     """
 
     # --------------------  Read DATABASE file  --------------------
     try:
         with open(app.db, "r") as fp:
             total = float(fp.read().rstrip())
-    except Exception:
-        total = 0.00
-    finally:
-        return templates.TemplateResponse("index.html", {"request": request, "total": total})
+    except Exception as err:
+        errmsg = f"Unknown issue reading database: {err}"
+        logger.error(errmsg)
+        raise HTTPException(status_code=500, detail=errmsg)
+    else:
+        return {"total": total}
 
 
 # -------------------------------------------------------------------------------------------------
@@ -77,7 +107,7 @@ async def index(request: Request):
 # -------------------------------------------------------------------------------------------------
 
 
-@app.get("/update")
+@api.get("/update")
 def update():
     """
     API endpoint for tallying up the notifications sent to the email account
@@ -132,7 +162,7 @@ def update():
 # -------------------------------------------------------------------------------------------------
 
 
-@app.get("/reset")
+@api.get("/reset")
 def reset(request: Request):
     """
     API Endpoint for resetting the current count
@@ -160,7 +190,7 @@ def reset(request: Request):
 # -------------------------------------------------------------------------------------------------
 
 
-@app.get("/health")
+@api.get("/health")
 def health(request: Request):
     """
     API Endpoint for Docker health checks

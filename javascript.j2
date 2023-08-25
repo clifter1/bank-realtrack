@@ -1,0 +1,43 @@
+const domain = '{{HOSTNAME}}';
+const errmsg = 'Issue with server response... ';
+const loader = document.getElementById("loader");
+const errors = document.getElementById("errors");
+const content = document.getElementById("content");
+
+let formatter = new Intl.NumberFormat(
+    "en-US",
+    {style: "currency", currency: "USD"}
+)
+
+window.onload = async () => {
+    fetch(domain + '/api/retrieve')
+        .then(response => response.json())
+        .then(data => {
+            console.log("API response -> load initial data:", data);
+            content.innerHTML = formatter.format(data.total);
+        })
+        .catch((error) => {
+            console.error('API response error:', error);
+            errors.innerHTML = errmsg;
+            errors.removeAttribute('hidden');
+        });
+};
+
+function loadData() {
+    content.setAttribute('hidden', '');
+    loader.removeAttribute('hidden');
+    fetch(domain + '/api/update')
+        .then(response => response.json())
+        .then(data => {
+            console.log("API response -> updated data:", data);
+            content.innerHTML = formatter.format(data.total);
+            loader.setAttribute('hidden', '');
+            content.removeAttribute('hidden');
+        })
+        .catch((error) => {
+            console.error('API response error:', error);
+            loader.setAttribute('hidden', '');
+            errors.innerHTML = errmsg;
+            errors.removeAttribute('hidden');
+        });
+}    

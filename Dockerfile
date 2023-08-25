@@ -6,6 +6,7 @@ LABEL description="Python FastAPI: Bank Ledger WebApp"
 ENV USERNAME= \
     PASSWORD= \
     IMAPPATH= \
+    HOSTNAME= \
     WEBSPORT=80 \
     LOGLEVEL=info \
     IMAPPORT=993 \
@@ -32,7 +33,7 @@ RUN apt-get update -y \
     && ln -fs /usr/share/zoneinfo/${TIMEZONE} /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata \
     && touch /etc/cron.d/sync-cron \
-    && echo "58 5,11,17,23 * * * curl http://localhost:${WEBSPORT}/api/total" >> /etc/cron.d/sync-cron \
+    && echo "58 5,11,17,23 * * * curl http://localhost:${WEBSPORT}/api/update" >> /etc/cron.d/sync-cron \
     && echo "2 0 1 * * curl http://localhost:${WEBSPORT}/api/reset" >> /etc/cron.d/sync-cron \
     && chmod 0644 /etc/cron.d/sync-cron \
     && crontab /etc/cron.d/sync-cron \
@@ -40,15 +41,15 @@ RUN apt-get update -y \
 
 WORKDIR /app
 
-COPY poetry.lock pyproject.toml ./
+COPY poetry.lock pyproject.toml javascript.j2 ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-ansi --no-interaction
 
 COPY run.py ./
-COPY templates/ ./templates/
+COPY static/ ./static/
+RUN jinja2 -D HOSTNAME=${HOSTNAME} javascript.j2 > static/javascript.js
 
 EXPOSE ${WEBSPORT}
-HEALTHCHECK --interval=600s --timeout=10s \
-        CMD curl --fail http://localhost:${WEBSPORT}/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:${WEBSPORT}/api/health || exit 1
 
 CMD ["sh", "-c", "cron && poetry run python run.py"]
