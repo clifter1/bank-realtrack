@@ -41,6 +41,7 @@ api = FastAPI(title="Bank Backend API")
 app.mount("/api", api)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
+
 # ----------  Log filtering class  ----------
 class EndpointFilter(logging.Filter):
     """

@@ -34,7 +34,7 @@ RUN apt-get update -y \
     && dpkg-reconfigure -f noninteractive tzdata \
     && touch /etc/cron.d/sync-cron \
     && echo "58 5,11,17,23 * * * curl http://localhost:${WEBSPORT}/api/update" >> /etc/cron.d/sync-cron \
-    && echo "2 0 1 * * curl http://localhost:${WEBSPORT}/api/reset" >> /etc/cron.d/sync-cron \
+    && echo "1 0 24 * * curl http://localhost:${WEBSPORT}/api/reset" >> /etc/cron.d/sync-cron \
     && chmod 0644 /etc/cron.d/sync-cron \
     && crontab /etc/cron.d/sync-cron \
     && mkdir ${DATADIRS}
