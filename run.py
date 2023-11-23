@@ -173,8 +173,18 @@ def reset(request: Request):
     if request.client.host != "127.0.0.1":
         raise HTTPException(status_code=405, detail="Access Denied")
 
+    # --------------------  Read DATABASE file  --------------------
     try:
-        logger.info("Saved total was reset for the new month")
+        with open(app.db, "r") as fp:
+            total = float(fp.read().rstrip())
+    except Exception as err:
+        errmsg = f"Unknown issue reading database: {err}"
+        logger.error(errmsg)
+        raise HTTPException(status_code=500, detail=errmsg)
+
+    # --------------------  Reste DATABASE file  --------------------
+    try:
+        logger.info(f"Total was reset for the month. Last month total: {total}")
         with open(app.db, "w") as fp:
             fp.write("0.00")
     except Exception as err:
