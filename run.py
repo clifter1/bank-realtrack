@@ -132,7 +132,8 @@ def update():
         with MailBox(env("IMAPPATH")).login(env("USERNAME"), env("PASSWORD")) as mailbox:
             # ----------  Parse email and add to total  ----------
             for msg in mailbox.fetch(AND(from_="Capital One", subject="A new transaction")):
-                amount = re.findall("\$[0-9]{1,3}\.[0-9]{2}", msg.text)[0].replace("$", "")
+                amount = re.findall("\$[0-9,]{1,5}\.[0-9]{2}", msg.text)[0]
+                amount = amount.replace("$", "").replace(",", "")
                 total = round(total + float(amount), 2)
                 all_messages.append(msg.uid)
                 logger.debug(f"Notification total {amount} added")
