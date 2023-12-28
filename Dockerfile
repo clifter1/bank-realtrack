@@ -9,6 +9,7 @@ ENV USERNAME= \
     HOSTNAME= \
     WEBSPORT=80 \
     LOGLEVEL=info \
+    TIMEOUTS=30 \
     IMAPPORT=993 \
     DATADIRS=/data \
     DATABASE=data.db \
