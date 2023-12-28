@@ -235,4 +235,4 @@ if __name__ == "__main__":
     Main - Uvicorn setup and port configurations
     """
 
-    uvicorn.run("run:app", host="0.0.0.0", port=env.int("WEBSPORT"), log_level=env("LOGLEVEL"), timeout_keep_alive=env("TIMEOUTS"))
+    uvicorn.run("run:app", host="0.0.0.0", port=env.int("WEBSPORT"), log_level=env("LOGLEVEL"), timeout_keep_alive=env.int("TIMEOUTS"))
